@@ -16,3 +16,9 @@ val EditorBg = Color(0xFF1E1E1E)          // Editor ရဲ့ နောက်ခ
 val LineNumberBar = Color(0xFF252526)     // စာကြောင်းရေတွက်ပြသည့် ဘားအရောင်
 val LineNumberText = Color(0xFF858585)    // စာကြောင်းရေစာသားအရောင်
 val CodeDefaultText = Color(0xFFD4D4D4)   // ပုံမှန်ကုဒ်စာသားအရောင်
+
+// 🎨 Real-time Syntax Highlighting အတွက် သီးသန့် Palette များ
+val KeywordColor = Color(0xFF569CD6)      // Kotlin Keywords (fun, class, val, var) များအတွက် အရောင်
+val StringColor = Color(0xFFCE9178)       // စာသား Strings ("Hello World") များအတွက် အရောင်
+val CommentColor = Color(0xFF6A9955)      // မှတ်ချက် Comments (// ...) များအတွက် အရောင်
+val NumberColor = Color(0xFFB5CEA8)       // ကိန်းဂဏန်း Numbers (123) များအတွက် အရောင်
