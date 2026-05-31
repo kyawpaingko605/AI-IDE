@@ -37,8 +37,9 @@ class MainViewModel(context: Context) : ViewModel() {
         private set
 
     init {
+        // 💡 [🧠 Build Engine Trigger]: အက်ပ်စဖွင့်သည်နှင့် ဖိုင်တွဲစနစ်ကို ချက်ချင်း အရင်ဆောက်စေခြင်း
+        createFullAndroidProjectStructure()
         extractCompilerTools()
-        createSampleProjectStructure()
     }
 
     fun logToTerminal(message: String) {
@@ -57,24 +58,36 @@ class MainViewModel(context: Context) : ViewModel() {
             val success = assetManager.extractAssetsToStorage()
             withContext(Dispatchers.Main) {
                 buildState = BuildState.Idle
-                if (success) logToTerminal("System: Compiler binaries are synchronized.")
-                else logToTerminal("Error: Native components missing.")
+                if (success) {
+                    logToTerminal("System: Compiler binaries (aapt2, d8) are synchronized successfully.")
+                } else {
+                    // 💡 Binaries မရှိသေးပါက လက်ရှိ ပရောဂျက်တည်ဆောက်မှုကို မထိခိုက်စေရန် Log သီးသန့်ပြခြင်း
+                    logToTerminal("Warning: Native compiler tools need execution permission or asset synchronization.")
+                }
             }
         }
     }
 
-    private fun createSampleProjectStructure() {
+    // 💡 [⚙️ Core Build Engine]: AIDE ကဲ့သို့ Standard ဖိုင်တွဲနှင့် ဖိုင်အကုန်လုံးကို Setup ချပေးမည့် နေရာကြီး
+    private fun createFullAndroidProjectStructure() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val layoutDir = File(projectBuilder.resDir, "layout").apply { if (!exists()) mkdirs() }
-                val valuesDir = File(projectBuilder.resDir, "values").apply { if (!exists()) mkdirs() }
+                // ၁။ လိုအပ်သော ဖိုဒါပတ်လမ်းကြောင်းများအား အကုန်အစုံ အတင်းအကျပ် ဆောက်ခိုင်းခြင်း
+                val javaSrcDir = File(projectBuilder.projectDir, "src/main/java/com/example/myapp").apply { if (!exists())  mkdirs() }
+                val resLayoutDir = File(projectBuilder.projectDir, "src/main/res/layout").apply { if (!exists()) mkdirs() }
+                val resValuesDir = File(projectBuilder.projectDir, "src/main/res/values").apply { if (!exists()) mkdirs() }
+                val resDrawableDir = File(projectBuilder.projectDir, "src/main/res/drawable").apply { if (!exists()) mkdirs() }
                 
-                val manifestFile = File(projectBuilder.projectDir, "AndroidManifest.xml")
+                if (!projectBuilder.binDir.exists()) projectBuilder.binDir.mkdirs()
+
+                // ၂။ အဓိက အသက်ဖြစ်သော AndroidManifest.xml အား အလိုအလျောက် ဆောက်ပေးခြင်း
+                val manifestFile = File(projectBuilder.projectDir, "src/main/AndroidManifest.xml")
                 if (!manifestFile.exists()) {
+                    manifestFile.parentFile.mkdirs()
                     manifestFile.writeText("""
                         <?xml version="1.0" encoding="utf-8"?>
                         <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.myapp">
-                            <application android:label="My Demo App">
+                            <application android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
                                 <activity android:name=".MainActivity" android:exported="true">
                                     <intent-filter>
                                         <action android:name="android.intent.action.MAIN" />
@@ -86,16 +99,67 @@ class MainViewModel(context: Context) : ViewModel() {
                     """.trimIndent())
                 }
 
-                val stringsFile = File(valuesDir, "strings.xml")
-                if (!stringsFile.exists()) {
-                    stringsFile.writeText("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">My Demo App</string>\n</resources>")
+                // ၃။ UI Graphic အတွက် တောင်းဆိုနေသော စုန်းစတိုင် layer-list / XML layouts များ ဖန်တီးခြင်း
+                val mainLayoutFile = File(resLayoutDir, "activity_main.xml")
+                if (!mainLayoutFile.exists()) {
+                    mainLayoutFile.writeText("""
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:background="#1E1E1E">
+                            
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Hello from AI-IDE Generated APK!"
+                                android:textColor="#FFFFFF"
+                                android:textSize="18sp"/>
+                        </LinearLayout>
+                    """.trimIndent())
                 }
 
-                val mainFile = File(projectBuilder.srcDir, "MainActivity.kt")
-                if (!mainFile.exists()) {
-                    mainFile.writeText("package com.example.myapp\n\nfun main() {\n    println(\"Hello Android Studio Monospace!\")\n}")
+                // ၄။ strings.xml အား စံနှုန်းအတိုင်း တည်ဆောက်ခြင်း
+                val stringsFile = File(resValuesDir, "strings.xml")
+                if (!stringsFile.exists()) {
+                    stringsFile.writeText("""
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <resources>
+                            <string name="app_name">AI IDE Demo App</string>
+                        </resources>
+                    """.trimIndent())
                 }
-            } catch (e: Exception) { e.printStackTrace() }
+
+                // ၅။ ပင်မ ကုဒ်မောင်းနှင်မည့် MainActivity.kt အား လမ်းကြောင်းမှန်ကန်စွာဖြင့် ကွက်တိ သွားဆောက်ပေးခြင်း
+                val mainActivityFile = File(javaSrcDir, "MainActivity.kt")
+                if (!mainActivityFile.exists()) {
+                    mainActivityFile.writeText("""
+                        package com.example.myapp
+
+                        import android.os.Bundle
+                        import android.app.Activity
+
+                        class MainActivity : Activity() {
+                            override fun onCreate(savedInstanceState: Bundle?) {
+                                super.onCreate(savedInstanceState)
+                                // Generated Layout အား ချိတ်ဆက်ခြင်း
+                                setContentView(resources.getIdentifier("activity_main", "layout", packageName))
+                            }
+                        }
+                    """.trimIndent())
+                }
+                
+                withContext(Dispatchers.Main) {
+                    logToTerminal("Build Engine: AIDE Project templates successfully synchronized!")
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    logToTerminal("Build Engine Exception: ${e.message}")
+                }
+            }
         }
     }
 
@@ -107,10 +171,13 @@ class MainViewModel(context: Context) : ViewModel() {
 
             val success = withContext(Dispatchers.IO) {
                 try {
-                    val sourceFile = File(projectBuilder.srcDir, "MainActivity.kt")
+                    // ပြင်ဆင်လိုက်သော ကုဒ်အား java package လမ်းကြောင်းထဲသို့ အသေ သွားသိမ်းခြင်း
+                    val javaSrcDir = File(projectBuilder.projectDir, "src/main/java/com/example/myapp")
+                    val sourceFile = File(javaSrcDir, "MainActivity.kt")
                     sourceFile.writeText(codeText)
 
-                    val aaptSuccess = projectBuilder.runAapt2Compile(projectBuilder.resDir) { log -> logToTerminal(log) }
+                    val resDirToCompile = File(projectBuilder.projectDir, "src/main/res")
+                    val aaptSuccess = projectBuilder.runAapt2Compile(resDirToCompile) { log -> logToTerminal(log) }
                     if (!aaptSuccess) return@withContext false
 
                     withContext(Dispatchers.Main) { buildState = BuildState.DexingCode }
