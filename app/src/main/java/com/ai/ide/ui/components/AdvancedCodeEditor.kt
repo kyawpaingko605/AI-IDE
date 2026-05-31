@@ -33,29 +33,44 @@ fun AdvancedCodeEditor(
     initialCode: String = "",
     onCodeChange: (String) -> Unit
 ) {
-    var codeValue by remember { mutableStateOf(TextFieldValue(initialCode)) }
+    // 💡 Initial တွင် AnnotatedString သုံး၍ အစပြုခြင်း
+    var codeValue by remember { 
+        mutableStateOf(TextFieldValue(annotatedString = highLightKotlinCode(initialCode))) 
+    }
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
 
+    // File Explorer မှ ဖိုင်ပြောင်းလျှင် စာသားချက်ချင်း လိုက်လဲပေးခြင်း
     LaunchedEffect(initialCode) {
         if (initialCode != codeValue.text) {
-            codeValue = TextFieldValue(text = initialCode, annotatedString = highLightKotlinCode(initialCode))
+            // 💡 [Fix 1]: constructor အမှားအား ပြင်ဆင်ပြီး AnnotatedString တိုက်ရိုက်ပေးသွင်းခြင်း
+            codeValue = TextFieldValue(annotatedString = highLightKotlinCode(initialCode))
         }
     }
 
     val lineCount = codeValue.text.split("\n").size
 
     Row(modifier = modifier.fillMaxSize().background(EditorBg)) {
+        // ၁။ စာကြောင်းရေတွက်ပြသည့် ကော်လံ
         Column(
-            modifier = Modifier.fillMaxHeight().background(LineNumberBar).verticalScroll(verticalScrollState).padding(vertical = 16.dp, horizontal = 8.dp)
+            modifier = Modifier
+                .fillMaxHeight()
+                .background(LineNumberBar)
+                .verticalScroll(verticalScrollState)
+                .padding(vertical = 16.dp, horizontal = 8.dp)
         ) {
             for (i in 1..lineCount) {
                 Text(text = i.toString(), color = LineNumberText, fontFamily = FontFamily.Monospace, fontSize = 14.sp, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
             }
         }
 
+        // ၂။ ကုဒ်ရေးသည့် နေရာ (Smart Input Field)
         Box(
-            modifier = Modifier.fillMaxSize().verticalScroll(verticalScrollState).horizontalScroll(horizontalScrollState).padding(vertical = 16.dp, horizontal = 12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(verticalScrollState)
+                .horizontalScroll(horizontalScrollState)
+                .padding(vertical = 16.dp, horizontal = 12.dp)
         ) {
             BasicTextField(
                 value = codeValue,
@@ -77,11 +92,11 @@ fun AdvancedCodeEditor(
                         }
                         if (pairChar != null) {
                             val autoPairedText = StringBuilder(newText).insert(selectionStart, pairChar).toString()
-                            // 💡 [Fix]: copy အစား TextFieldValue ဖြင့် တိုက်ရိုက် တည်ဆောက်ခြင်း
+                            
+                            // 💡 [Fix 2]: text နှင့် annotatedString အား ရောမပေးတော့ဘဲ ကွက်တိ ပြင်ဆင်ခြင်း
                             codeValue = TextFieldValue(
-                                text = autoPairedText,
-                                selection = androidx.compose.ui.text.TextRange(selectionStart),
-                                annotatedString = highLightKotlinCode(autoPairedText)
+                                annotatedString = highLightKotlinCode(autoPairedText),
+                                selection = androidx.compose.ui.text.TextRange(selectionStart)
                             )
                             onCodeChange(autoPairedText)
                             return@BasicTextField
@@ -100,18 +115,18 @@ fun AdvancedCodeEditor(
                         if (totalSpaces > 0) {
                             val indentSpaces = " ".repeat(totalSpaces)
                             val indentedText = StringBuilder(newText).insert(selectionStart, indentSpaces).toString()
-                            // 💡 [Fix]: copy အစား TextFieldValue ဖြင့် တိုက်ရိုက် တည်ဆောက်ခြင်း
+
+                            // 💡 [Fix 3]: text နှင့် annotatedString အမှားအား စံနှုန်းအတိုင်း ကွက်တိ ပြင်ဆင်ခြင်း
                             codeValue = TextFieldValue(
-                                text = indentedText,
-                                selection = androidx.compose.ui.text.TextRange(selectionStart + totalSpaces),
-                                annotatedString = highLightKotlinCode(indentedText)
+                                annotatedString = highLightKotlinCode(indentedText),
+                                selection = androidx.compose.ui.text.TextRange(selectionStart + totalSpaces)
                             )
                             onCodeChange(indentedText)
                             return@BasicTextField
                         }
                     }
 
-                    // ပုံမှန်စာရိုက်လျှင် Highlighting Engine သို့ သွားမည်
+                    // ပုံမှန်စာရိုက်လျှင် Dynamic Highlighting သို့ တိုက်ရိုက်သွားမည်
                     codeValue = newValue.copy(annotatedString = highLightKotlinCode(newText))
                     onCodeChange(newText)
                 },
