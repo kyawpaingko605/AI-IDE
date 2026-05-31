@@ -1,0 +1,2 @@
+#!/bin/sh
+exec dalvikvm -Xmx128m -cp "$0.jar" sun.security.tools.keytool.Main "$@"
