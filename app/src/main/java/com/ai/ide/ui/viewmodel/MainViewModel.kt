@@ -37,8 +37,11 @@ class MainViewModel(context: Context) : ViewModel() {
         private set
 
     init {
-        // အက်ပ်စဖွင့်သည်နှင့် လိုအပ်သော Binaries များကို သီးသန့်ထုတ်ယူခြင်း
+        // ၁။ အက်ပ်စဖွင့်သည်နှင့် လိုအပ်သော Binaries များကို သီးသန့်ထုတ်ယူခြင်း
         extractCompilerTools()
+        
+        // 💻 ၂။ စမ်းသပ်ရန် ပရောဂျက် Directory ဖွဲ့စည်းပုံအား အလိုအလျောက် ဆောက်ပေးခြင်း
+        createSampleProjectStructure()
     }
 
     private fun extractCompilerTools() {
@@ -52,6 +55,34 @@ class MainViewModel(context: Context) : ViewModel() {
             
             withContext(Dispatchers.Main) {
                 buildState = if (success) BuildState.Idle else BuildState.Error("Failed to extract compiler tools.")
+            }
+        }
+    }
+
+    /**
+     * 📂 [Project Directory Setup]
+     * အက်ပ်ပထမဆုံးပွင့်ချိန်တွင် လိုအပ်သော src, res, bin ဖိုဒါများနှင့် MainActivity.kt ကို ဆောက်ပေးမည့် စနစ်
+     */
+    private fun createSampleProjectStructure() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // အဓိက ဖိုင်တွဲများ ရှိမရှိ စစ်ဆေးပြီး မရှိပါက ဆောက်ပေးခြင်း
+                if (!projectBuilder.srcDir.exists()) projectBuilder.srcDir.mkdirs()
+                if (!projectBuilder.resDir.exists()) projectBuilder.resDir.mkdirs()
+                if (!projectBuilder.binDir.exists()) projectBuilder.binDir.mkdirs()
+
+                // အခြေခံ Sample ကုဒ်ဖိုင်တစ်ခုအား အလိုအလျောက် ဖန်တီးပေးခြင်း
+                val mainActivityFile = File(projectBuilder.srcDir, "MainActivity.kt")
+                if (!mainActivityFile.exists()) {
+                    mainActivityFile.writeText(
+                        "package com.example.myapp\n\n" +
+                        "fun main() {\n" +
+                        "    println(\"Hello from AI-IDE Engine!\")\n" +
+                        "}"
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
