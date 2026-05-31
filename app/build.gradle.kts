@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android") version "1.9.22"
 }
 
+// 🛠️ ပြဿနာဖြေရှင်းချက် - အောက်ပါ Repository စနစ်ကို တိုက်ရိုက် ကြေညာပေးခြင်း
+repositories {
+    google()
+    mavenCentral()
+}
+
 android {
     namespace = "com.ai.ide"
     compileSdk = 34
@@ -52,7 +58,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
-    // 🎨 Jetpack Compose UI Platform (BOM ဗားရှင်းနှင့် သက်ဆိုင်ရာ Library ဗားရှင်းများ အသေကြေညာခြင်း)
+    // 🎨 Jetpack Compose UI Platform
     implementation(platform("androidx.compose:compose-bom:2023.08.0"))
     implementation("androidx.compose.ui:ui:1.5.0")
     implementation("androidx.compose.ui:ui-graphics:1.5.0")
