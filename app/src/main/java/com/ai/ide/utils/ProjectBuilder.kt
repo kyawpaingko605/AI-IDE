@@ -2,59 +2,65 @@ package com.ai.ide.utils
 
 import android.content.Context
 import java.io.File
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class ProjectBuilder(private val context: Context) {
 
-    // AI-IDE အတွင်း သီးသန့်အလုပ်လုပ်မည့် Folder လမ်းကြောင်းများ
     private val internalStorage = context.filesDir
     val projectDir = File(internalStorage, "AI_Workspace")
     val srcDir = File(projectDir, "src/main/java")
     val resDir = File(projectDir, "src/main/res")
     val binDir = File(projectDir, "bin")
-    val assetsDir = File(projectDir, "src/main/assets")
+
+    private val binToolsDir = File(internalStorage, "bin_tools")
 
     init {
-        // Folder များ မရှိသေးပါက အလိုအလျောက် ဆောက်ပေးမည့် စနစ်
         if (!projectDir.exists()) projectDir.mkdirs()
         if (!srcDir.exists()) srcDir.mkdirs()
         if (!resDir.exists()) resDir.mkdirs()
         if (!binDir.exists()) binDir.mkdirs()
-        if (!assetsDir.exists()) assetsDir.mkdirs()
     }
 
-    /**
-     * 💡 [AAPT2 Task]
-     * XML Resources များကို ချုံ့ပြီး compile လုပ်ရန်အတွက် Logic
-     */
-    fun runAapt2Compile(resFile: File): Boolean {
+    fun runAapt2Compile(resFile: File, onLogReceived: (String) -> Unit): Boolean {
         val outputDir = File(binDir, "res_compiled")
         if (!outputDir.exists()) outputDir.mkdirs()
         
-        // ဖုန်းထဲရှိ embedded aapt2 binary ကို လှမ်းခေါ်သည့် Command
-        val command = "aapt2 compile --dir ${resFile.absolutePath} -o ${outputDir.absolutePath}"
-        return executeNativeCommand(command)
+        val aapt2Binary = File(binToolsDir, "aapt2")
+        val commandList = listOf(
+            aapt2Binary.absolutePath, "compile",
+            "--dir", resFile.absolutePath,
+            "-o", outputDir.absolutePath
+        )
+        return executeNativeCommand(aapt2Binary, commandList, onLogReceived)
     }
 
-    /**
-     * 💡 [D8 Dexer Task]
-     * Java/Kotlin .class ဖိုင်များကို Android ဖတ်နိုင်သော classes.dex အဖြစ် ပြောင်းလဲခြင်း
-     */
-    fun runD8Dexing(classFiles: List<File>): Boolean {
+    fun runD8Dexing(classFiles: List<File>, onLogReceived: (String) -> Unit): Boolean {
         val dexOutputFile = File(binDir, "classes.dex")
-        val filesList = classFiles.joinToString(" ") { it.absolutePath }
+        val d8Binary = File(binToolsDir, "d8")
         
-        val command = "d8 --output ${dexOutputFile.absolutePath} $filesList"
-        return executeNativeCommand(command)
+        val commandList = mutableListOf(d8Binary.absolutePath, "--output", dexOutputFile.absolutePath)
+        classFiles.forEach { commandList.add(it.absolutePath) }
+        
+        return executeNativeCommand(d8Binary, commandList, onLogReceived)
     }
 
-    // နောက်ကွယ်ကနေ Linux Compilers များကို အမိန့်ပေးခိုင်းစေသည့် စနစ်
-    private fun executeNativeCommand(command: String): Boolean {
+    private fun executeNativeCommand(binaryFile: File, command: List<String>, onLogReceived: (String) -> Unit): Boolean {
+        if (!binaryFile.exists()) {
+            onLogReceived("Error: ${binaryFile.name} Binary Tool ကို မတွေ့ရှိပါ။")
+            return false
+        }
         return try {
-            val process = Runtime.getRuntime().exec(command)
-            val exitCode = process.waitFor()
-            exitCode == 0 // 0 ပြန်လာပါက လုပ်ငန်းစဉ် အောင်မြင်သည်
+            binaryFile.setExecutable(true, false)
+            val process = ProcessBuilder(command).redirectErrorStream(true).start()
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                onLogReceived(line ?: "")
+            }
+            process.waitFor() == 0
         } catch (e: Exception) {
-            e.printStackTrace()
+            onLogReceived("Exception: ${e.message}")
             false
         }
     }
