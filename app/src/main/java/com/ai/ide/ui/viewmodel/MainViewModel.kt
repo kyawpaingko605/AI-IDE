@@ -36,6 +36,10 @@ class MainViewModel(context: Context) : ViewModel() {
     var buildState by mutableStateOf<BuildState>(BuildState.Idle)
         private set
 
+    // 💻 Terminal View တွင် ပြသမည့် Log များစာရင်းအား မှတ်သားမည့် State List
+    var terminalLogs by mutableStateOf<List<String>>(listOf("System initialized..."))
+        private set
+
     init {
         // ၁။ အက်ပ်စဖွင့်သည်နှင့် လိုအပ်သော Binaries များကို သီးသန့်ထုတ်ယူခြင်း
         extractCompilerTools()
@@ -44,34 +48,51 @@ class MainViewModel(context: Context) : ViewModel() {
         createSampleProjectStructure()
     }
 
+    /**
+     * 📝 Terminal ထဲသို့ Log အသစ်များ လှမ်းထည့်ပေးမည့် Utility Function
+     */
+    fun logToTerminal(message: String) {
+        viewModelScope.launch(Dispatchers.Main) {
+            terminalLogs = terminalLogs + message
+        }
+    }
+
+    // Build လုပ်ငန်းစဉ် မစတင်မီ Log ဟောင်းများကို ရှင်းလင်းရန် Function
+    fun clearTerminal() {
+        terminalLogs = listOf("Starting build process...")
+    }
+
     private fun extractCompilerTools() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Main Thread ပေါ်တွင် State ပြောင်းလဲခြင်း
             withContext(Dispatchers.Main) {
                 buildState = BuildState.ExtractingTools
+                logToTerminal("Assets: Extracting compiler binaries to internal storage...")
             }
             
             val success = assetManager.extractAssetsToStorage()
             
             withContext(Dispatchers.Main) {
-                buildState = if (success) BuildState.Idle else BuildState.Error("Failed to extract compiler tools.")
+                if (success) {
+                    buildState = BuildState.Idle
+                    logToTerminal("Assets: Core compiler tools ready.")
+                } else {
+                    buildState = BuildState.Error("Failed to extract compiler tools.")
+                    logToTerminal("Error: Extraction failed. Native components are missing.")
+                }
             }
         }
     }
 
     /**
      * 📂 [Project Directory Setup]
-     * အက်ပ်ပထမဆုံးပွင့်ချိန်တွင် လိုအပ်သော src, res, bin ဖိုဒါများနှင့် MainActivity.kt ကို ဆောက်ပေးမည့် စနစ်
      */
     private fun createSampleProjectStructure() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // အဓိက ဖိုင်တွဲများ ရှိမရှိ စစ်ဆေးပြီး မရှိပါက ဆောက်ပေးခြင်း
                 if (!projectBuilder.srcDir.exists()) projectBuilder.srcDir.mkdirs()
                 if (!projectBuilder.resDir.exists()) projectBuilder.resDir.mkdirs()
                 if (!projectBuilder.binDir.exists()) projectBuilder.binDir.mkdirs()
 
-                // အခြေခံ Sample ကုဒ်ဖိုင်တစ်ခုအား အလိုအလျောက် ဖန်တီးပေးခြင်း
                 val mainActivityFile = File(projectBuilder.srcDir, "MainActivity.kt")
                 if (!mainActivityFile.exists()) {
                     mainActivityFile.writeText(
@@ -88,49 +109,66 @@ class MainViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * 🚀 [Core Build Pipeline]
-     * စာသားကုဒ်များကို လက်ခံပြီး APK အဖြစ် အဆင့်ဆင့် ပြောင်းလဲပေးသည့် အဓိက Function
+     * 🚀 [Core Build Pipeline with Logging]
+     * စာသားကုဒ်များကို လက်ခံပြီး APK အဖြစ် ပြောင်းလဲစဉ် Terminal သို့ Log များ ထုတ်ပေးမည့် စနစ်
      */
     fun buildProject(codeText: String) {
         viewModelScope.launch {
-            // စတင်ချိန်တွင် Compiling Resources State သို့ ပြောင်းလဲခြင်း
+            clearTerminal() // Log ဟောင်းများ အရင်ရှင်းမည်
             buildState = BuildState.CompilingResources
+            logToTerminal("AAPT2: Launching XML and Resource Compiler...")
 
             val success = withContext(Dispatchers.IO) {
                 try {
                     // ၁။ ကုဒ်ဖိုင်အား အရင်သိမ်းဆည်းခြင်း
                     val sourceFile = File(projectBuilder.srcDir, "MainActivity.kt")
                     sourceFile.writeText(codeText)
+                    logToTerminal("Workspace: Selected source code saved to MainActivity.kt")
 
                     // ၂။ AAPT2 Resource Compile လုပ်ခြင်း
                     val aaptSuccess = projectBuilder.runAapt2Compile(projectBuilder.resDir)
-                    if (!aaptSuccess) return@withContext false
+                    if (!aaptSuccess) {
+                        logToTerminal("Error: AAPT2 resource compilation failed!")
+                        return@withContext false
+                    }
+                    logToTerminal("AAPT2: Resource compiled successfully (R.java / intermediate generated).")
 
-                    // ၃။ D8 Dexing လုပ်ငန်းစဉ်သို့ ကူးပြောင်းခြင်း State ပြောင်းမည်
+                    // ၃။ D8 Dexing လုပ်ငန်းစဉ်သို့ ကူးပြောင်းခြင်း
                     withContext(Dispatchers.Main) { 
                         buildState = BuildState.DexingCode 
                     }
+                    logToTerminal("D8: Converting Java/Kotlin bytecode into Dalvik Executable (.dex)...")
                     val dexSuccess = projectBuilder.runD8Dexing(listOf(sourceFile))
-                    if (!dexSuccess) return@withContext false
+                    if (!dexSuccess) {
+                        logToTerminal("Error: D8 dexer optimization failed!")
+                        return@withContext false
+                    }
+                    logToTerminal("D8: Classes.dex optimization successfully built.")
 
-                    // ၄။ APK လက်မှတ်ထိုးခြင်း State ပြောင်းမည်
+                    // ၄။ APK လက်မှတ်ထိုးခြင်း
                     withContext(Dispatchers.Main) { 
                         buildState = BuildState.SigningApk 
                     }
+                    logToTerminal("ApkSigner: Packaging and cryptographically signing the package...")
                     val unsignedApk = File(projectBuilder.binDir, "app-unsigned.apk")
                     val signedApk = File(projectBuilder.binDir, "app-release.apk")
 
                     apkSigner.signApk(unsignedApk, signedApk)
+                    logToTerminal("ApkSigner: Signature alignment verified.")
+                    true
                 } catch (e: Exception) {
+                    logToTerminal("Exception Error: ${e.message}")
                     false
                 }
             }
 
             // ၅။ ရလဒ်အခြေအနေကို UI သို့ အတည်ထုတ်ပြန်ခြင်း
-            buildState = if (success) {
-                BuildState.Success(File(projectBuilder.binDir, "app-release.apk"))
+            if (success) {
+                buildState = BuildState.Success(File(projectBuilder.binDir, "app-release.apk"))
+                logToTerminal("Success: Final production APK is ready to install!")
             } else {
-                BuildState.Error("Build process failed. Please check logs.")
+                buildState = BuildState.Error("Build process failed. Please check logs.")
+                logToTerminal("Error: Build pipeline broke down. Review syntax or tools placement.")
             }
         }
     }
