@@ -100,7 +100,6 @@ fun AdvancedCodeEditor(
                             
                             val highlighted = highLightKotlinCode(autoPairedText)
                             codeValue = newValue.copy(
-                                text = autoPairedText,
                                 annotatedString = highlighted,
                                 selection = androidx.compose.ui.text.TextRange(selectionStart)
                             )
@@ -109,7 +108,7 @@ fun AdvancedCodeEditor(
                         }
                     }
 
-                    // [🧠 Logic B] Smart Indentation (Enter ขေါက်လျှင် Space အလိုအလျောက်ချပေးခြင်း)
+                    // [🧠 Logic B] Smart Indentation (Enter ခေါက်လျှင် Space အလိုအလျောက်ချပေးခြင်း)
                     if (newText.length > oldText.length && selectionStart > 0 && newText[selectionStart - 1] == '\n') {
                         val lines = newText.substring(0, selectionStart - 1).split("\n")
                         val lastLine = lines.lastOrNull() ?: ""
@@ -126,7 +125,6 @@ fun AdvancedCodeEditor(
 
                             val highlighted = highLightKotlinCode(indentedText)
                             codeValue = newValue.copy(
-                                text = indentedText,
                                 annotatedString = highlighted,
                                 selection = androidx.compose.ui.text.TextRange(selectionStart + totalSpaces)
                             )
