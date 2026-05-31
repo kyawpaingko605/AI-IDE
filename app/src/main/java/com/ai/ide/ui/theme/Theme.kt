@@ -45,7 +45,8 @@ fun AIIDETheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // 💡 Default Material3 Typography အား အသုံးပြုပါသည်
+        typography = Typography,
+        shapes = Shapes, // 💡 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သော Shapes စနစ်အား ချိတ်ဆက်ခြင်း
         content = content
     )
 }
