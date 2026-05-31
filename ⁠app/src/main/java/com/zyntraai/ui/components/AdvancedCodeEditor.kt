@@ -1,11 +1,11 @@
-package com.zyntraai.ui.components
+package com.ai.ide.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll // 🛠️ import2. အမှားအား ပြင်ဆင်ပြီးသားဖြစ်သည်
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -66,7 +66,7 @@ fun AdvancedCodeEditor(
             }
         }
 
-        // ၂။ ကုဒ်ရေးသည့် နေရာ (Code Input Field + Smart Logic ဦးနှောက်ပိုင်း ပေါင်းစပ်ပြီးသား)
+        // ၂။ ကုဒ်ရေးသည့် နေရာ (Code Input Field + Smart Logic ဦးနှောက်ပိုင်း)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,7 +81,7 @@ fun AdvancedCodeEditor(
                     val newText = newValue.text
                     val selectionStart = newValue.selection.start
 
-                    // [🧠 Logic A] ကွင်းစ ကွင်းပိတ်များ အလိုအလျောက် ဖြည့်ပေးသည့် စနစ် (Auto-Pairing)
+                    // [🧠 Logic A] Bracket Auto-Pairing
                     if (newText.length > oldText.length && selectionStart > 0) {
                         val typedChar = newText[selectionStart - 1]
                         val pairChar = when (typedChar) {
@@ -109,7 +109,7 @@ fun AdvancedCodeEditor(
                         }
                     }
 
-                    // [🧠 Logic B] Enter ခေါက်လျှင် Space အလိုအလျောက်ချပေးသည့် စနစ် (Smart Indentation)
+                    // [🧠 Logic B] Smart Indentation (Enter ခေါက်လျှင် Space ညှိပေးခြင်း)
                     if (newText.length > oldText.length && selectionStart > 0 && newText[selectionStart - 1] == '\n') {
                         val lines = newText.substring(0, selectionStart - 1).split("\n")
                         val lastLine = lines.lastOrNull() ?: ""
