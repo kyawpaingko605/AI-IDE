@@ -5,7 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
-import2.import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.verticalScroll // 🛠️ import2. အမှားအား ပြင်ဆင်ပြီးသားဖြစ်သည်
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -66,7 +66,7 @@ fun AdvancedCodeEditor(
             }
         }
 
-        // ၂။ ကုဒ်ရေးသည့် နေရာ (Code Input Field)
+        // ၂။ ကုဒ်ရေးသည့် နေရာ (Code Input Field + Smart Logic ဦးနှောက်ပိုင်း ပေါင်းစပ်ပြီးသား)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,10 +77,68 @@ fun AdvancedCodeEditor(
             BasicTextField(
                 value = codeValue,
                 onValueChange = { newValue ->
-                    // Highlighting Logic ကို နောက်ကွယ်ကနေ အမြန်ဆုံး Run စေခြင်း
-                    val highlighted = highLightKotlinCode(newValue.text)
+                    val oldText = codeValue.text
+                    val newText = newValue.text
+                    val selectionStart = newValue.selection.start
+
+                    // [🧠 Logic A] ကွင်းစ ကွင်းပိတ်များ အလိုအလျောက် ဖြည့်ပေးသည့် စနစ် (Auto-Pairing)
+                    if (newText.length > oldText.length && selectionStart > 0) {
+                        val typedChar = newText[selectionStart - 1]
+                        val pairChar = when (typedChar) {
+                            '{' -> '}'
+                            '(' -> ')'
+                            '[' -> ']'
+                            '"' -> '"'
+                            '\'' -> '\''
+                            else -> null
+                        }
+
+                        if (pairChar != null) {
+                            val autoPairedText = StringBuilder(newText)
+                                .insert(selectionStart, pairChar)
+                                .toString()
+                            
+                            val highlighted = highLightKotlinCode(autoPairedText)
+                            codeValue = newValue.copy(
+                                text = autoPairedText,
+                                annotatedString = highlighted,
+                                selection = androidx.compose.ui.text.TextRange(selectionStart)
+                            )
+                            onCodeChange(autoPairedText)
+                            return@BasicTextField
+                        }
+                    }
+
+                    // [🧠 Logic B] Enter ခေါက်လျှင် Space အလိုအလျောက်ချပေးသည့် စနစ် (Smart Indentation)
+                    if (newText.length > oldText.length && selectionStart > 0 && newText[selectionStart - 1] == '\n') {
+                        val lines = newText.substring(0, selectionStart - 1).split("\n")
+                        val lastLine = lines.lastOrNull() ?: ""
+                        
+                        val spacesCount = lastLine.takeWhile { it == ' ' }.length
+                        val extraSpaces = if (lastLine.trim().endsWith("{")) 4 else 0
+                        val totalSpaces = spacesCount + extraSpaces
+
+                        if (totalSpaces > 0) {
+                            val indentSpaces = " ".repeat(totalSpaces)
+                            val indentedText = StringBuilder(newText)
+                                .insert(selectionStart, indentSpaces)
+                                .toString()
+
+                            val highlighted = highLightKotlinCode(indentedText)
+                            codeValue = newValue.copy(
+                                text = indentedText,
+                                annotatedString = highlighted,
+                                selection = androidx.compose.ui.text.TextRange(selectionStart + totalSpaces)
+                            )
+                            onCodeChange(indentedText)
+                            return@BasicTextField
+                        }
+                    }
+
+                    // ပုံမှန်စာရိုက်လျှင် Highlighting Engine သို့ တိုက်ရိုက်သွားမည်
+                    val highlighted = highLightKotlinCode(newText)
                     codeValue = newValue.copy(annotatedString = highlighted)
-                    onCodeChange(newValue.text)
+                    onCodeChange(newText)
                 },
                 textStyle = LocalTextStyle.current.copy(
                     color = CodeDefaultText,
@@ -99,38 +157,32 @@ fun highLightKotlinCode(text: String): AnnotatedString {
     return buildAnnotatedString {
         append(text)
 
-        // Token Patterns များ သတ်မှတ်ခြင်း (Keywords, Strings, Comments, Numbers)
         val keywords = Pattern.compile("\\b(package|import|class|interface|fun|val|var|return|if|else|for|while|when|is|in|as|try|catch|finally|init|this|super)\\b")
         val strings = Pattern.compile("\"([^\"]*)\"|'([^']*)'")
         val comments = Pattern.compile("//.*|/\\*(?s).*?\\*/")
         val numbers = Pattern.compile("\\b\\d+(\\.\\d+)?\\b")
         val annotations = Pattern.compile("@\\w+")
 
-        // ၁။ Comments အရောင်ဆိုးခြင်း (အစိမ်းရောင်)
         val commentMatcher = comments.matcher(text)
         while (commentMatcher.find()) {
             addStyle(SpanStyle(color = Color(0xFF6A9955)), commentMatcher.start(), commentMatcher.end())
         }
 
-        // ၂။ Keywords အရောင်ဆိုးခြင်း (အပြာရောင်)
         val keywordMatcher = keywords.matcher(text)
         while (keywordMatcher.find()) {
             addStyle(SpanStyle(color = Color(0xFF569CD6)), keywordMatcher.start(), keywordMatcher.end())
         }
 
-        // ၃။ Strings အရောင်ဆိုးခြင်း (လိမ္မော်ရောင်)
         val stringMatcher = strings.matcher(text)
         while (stringMatcher.find()) {
             addStyle(SpanStyle(color = Color(0xFFCE9178)), stringMatcher.start(), stringMatcher.end())
         }
 
-        // ၄။ Numbers အရောင်ဆိုးခြင်း (အဝါစိမ်းရောင်)
         val numberMatcher = numbers.matcher(text)
         while (numberMatcher.find()) {
             addStyle(SpanStyle(color = Color(0xFFB5CEA8)), numberMatcher.start(), numberMatcher.end())
         }
 
-        // ၅။ Annotations (@Composable စသည်) အရောင်ဆိုးခြင်း (ခရမ်းရောင်)
         val annotationMatcher = annotations.matcher(text)
         while (annotationMatcher.find()) {
             addStyle(SpanStyle(color = Color(0xFFBBB529)), annotationMatcher.start(), annotationMatcher.end())
