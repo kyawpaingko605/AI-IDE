@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -25,51 +26,52 @@ fun FileExplorerView(
     modifier: Modifier = Modifier
 ) {
     val fileManager = remember { ProjectFileManager() }
+    var currentDir by remember(projectDir) { mutableStateOf(projectDir) }
     var fileList by remember { mutableStateOf(emptyList<File>()) }
 
-    // ဖိုင်စာရင်းများကို ဖတ်ယူခြင်း
-    LaunchedEffect(projectDir) {
-        fileList = fileManager.getProjectStructure(projectDir)
+    LaunchedEffect(currentDir) {
+        fileList = fileManager.getProjectStructure(currentDir)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .width(240.dp)
-            .padding(8.dp)
-    ) {
-        Text(
-            text = "PROJECT FILES",
-            fontSize = 12.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+    Column(modifier = modifier.fillMaxHeight().padding(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = currentDir.name.uppercase(),
+                fontSize = 11.sp,
+                color = Color.Gray,
+                modifier = Modifier.weight(1f)
+            )
+            if (currentDir != projectDir) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(16.dp).clickable { currentDir = currentDir.parentFile ?: projectDir }
+                )
+            }
+        }
 
-        LazyColumn {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(fileList) { file ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { if (!file.isDirectory) onFileSelected(file) }
+                        .clickable {
+                            if (file.isDirectory) currentDir = file
+                            else onFileSelected(file)
+                        }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // ဖိုဒါနှင့် ဖိုင်အလိုက် Icon ခွဲပြခြင်း
                     val icon = if (file.isDirectory) Icons.Default.Folder else Icons.Default.Description
                     val iconColor = if (file.isDirectory) Color(0xFFE5A93C) else Color(0xFF3C99E5)
 
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconColor,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = file.name,
-                        fontSize = 14.sp,
-                        color = Color(0xFFD4D4D4)
-                    )
+                    Text(text = file.name, fontSize = 14.sp, color = Color(0xFFD4D4D4))
                 }
             }
         }
