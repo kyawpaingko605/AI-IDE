@@ -64,6 +64,7 @@ fun AdvancedCodeEditor(
                     val newText = newValue.text
                     val selectionStart = newValue.selection.start
 
+                    // [🧠 Logic A] Bracket Auto-Pairing
                     if (newText.length > oldText.length && selectionStart > 0) {
                         val typedChar = newText[selectionStart - 1]
                         val pairChar = when (typedChar) {
@@ -76,12 +77,41 @@ fun AdvancedCodeEditor(
                         }
                         if (pairChar != null) {
                             val autoPairedText = StringBuilder(newText).insert(selectionStart, pairChar).toString()
-                            codeValue = newValue.copy(text = autoPairedText, annotatedString = highLightKotlinCode(autoPairedText), selection = androidx.compose.ui.text.TextRange(selectionStart))
+                            // 💡 [Fix]: copy အစား TextFieldValue ဖြင့် တိုက်ရိုက် တည်ဆောက်ခြင်း
+                            codeValue = TextFieldValue(
+                                text = autoPairedText,
+                                selection = androidx.compose.ui.text.TextRange(selectionStart),
+                                annotatedString = highLightKotlinCode(autoPairedText)
+                            )
                             onCodeChange(autoPairedText)
                             return@BasicTextField
                         }
                     }
 
+                    // [🧠 Logic B] Smart Indentation
+                    if (newText.length > oldText.length && selectionStart > 0 && newText[selectionStart - 1] == '\n') {
+                        val lines = newText.substring(0, selectionStart - 1).split("\n")
+                        val lastLine = lines.lastOrNull() ?: ""
+                        
+                        val spacesCount = lastLine.takeWhile { it == ' ' }.length
+                        val extraSpaces = if (lastLine.trim().endsWith("{")) 4 else 0
+                        val totalSpaces = spacesCount + extraSpaces
+
+                        if (totalSpaces > 0) {
+                            val indentSpaces = " ".repeat(totalSpaces)
+                            val indentedText = StringBuilder(newText).insert(selectionStart, indentSpaces).toString()
+                            // 💡 [Fix]: copy အစား TextFieldValue ဖြင့် တိုက်ရိုက် တည်ဆောက်ခြင်း
+                            codeValue = TextFieldValue(
+                                text = indentedText,
+                                selection = androidx.compose.ui.text.TextRange(selectionStart + totalSpaces),
+                                annotatedString = highLightKotlinCode(indentedText)
+                            )
+                            onCodeChange(indentedText)
+                            return@BasicTextField
+                        }
+                    }
+
+                    // ပုံမှန်စာရိုက်လျှင် Highlighting Engine သို့ သွားမည်
                     codeValue = newValue.copy(annotatedString = highLightKotlinCode(newText))
                     onCodeChange(newText)
                 },
