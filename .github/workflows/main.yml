@@ -31,5 +31,13 @@ jobs:
     - name: Grant Execute Permission for Gradle
       run: chmod +x gradlew
 
-    - name: Run Build and Test with Gradle
-      run: ./gradlew build
+    # 🚀 Build လုပ်ပြီး APK အမှန်တကယ် ထုတ်လုပ်ပေးမည့် အဆင့်
+    - name: Assemble Debug APK
+      run: ./gradlew assembleDebug
+
+    # 📦 ထွက်လာသော APK ဖိုင်ကို GitHub Actions ပေါ်သို့ သိမ်းဆည်းပေးခြင်း
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: AI-IDE-Debug-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
