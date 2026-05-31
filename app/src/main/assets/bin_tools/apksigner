@@ -1,0 +1,3 @@
+#!/bin/sh
+# Android System ၏ built-in core အား လှမ်းခေါ်ရန် script
+exec dalvikvm -Xmx256m -cp "$0.jar" com.android.apksigner.Apksigner "$@"
