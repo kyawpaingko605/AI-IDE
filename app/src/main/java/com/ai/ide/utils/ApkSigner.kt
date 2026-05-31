@@ -2,68 +2,65 @@ package com.ai.ide.utils
 
 import android.content.Context
 import java.io.File
-import java.io.FileOutputStream
-import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.KeyStore
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
-import java.util.Date
-import javax.security.auth.x500.X500Principal
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class ApkSigner(private val context: Context) {
 
-    /**
-     * 💡 [Sign APK Task]
-     * ထွက်လာသည့် Unsigned APK ဖိုင်ကို သီးသန့် Key သုံးပြီး လက်မှတ်ထိုးပေးမည့် စနစ်
-     */
-    fun signApk(unsignedApk: File, signedApk: File): Boolean {
-        return try {
-            if (!unsignedApk.exists()) return false
+    private val binToolsDir = File(context.filesDir, "bin_tools")
+    private val keystoreFile = File(context.filesDir, "debug.keystore")
 
-            // ၁။ အလိုအလျောက် ဒစ်ဂျစ်တယ်လက်မှတ် (Key & Certificate) ထုတ်ယူခြင်း
-            val keyPair = generateKeyPair()
-            val cert = generateCertificate(keyPair)
+    fun signApk(unsignedApk: File, signedApk: File, onLogReceived: (String) -> Unit): Boolean {
+        if (!unsignedApk.exists()) return false
 
-            // ၂။ APK အား လက်မှတ်ထိုးပြီး အတည်ထုတ်လုပ်ခြင်း Logic
-            val command = "apksigner sign --key-content ${keyPair.private.encoded} --cert-content ${cert.encoded} --out ${signedApk.absolutePath} ${unsignedApk.absolutePath}"
-            
-            executeSignCommand(command)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
+        if (!keystoreFile.exists()) {
+            val created = generateDebugKeystore()
+            if (!created) {
+                onLogReceived("Error: Keystore generation failed.")
+                return false
+            }
         }
+
+        val apksignerBinary = File(binToolsDir, "apksigner")
+        val command = listOf(
+            apksignerBinary.absolutePath, "sign",
+            "--ks", keystoreFile.absolutePath,
+            "--ks-pass", "pass:android",
+            "--ks-key-alias", "androiddebugkey",
+            "--key-pass", "pass:android",
+            "--out", signedApk.absolutePath,
+            unsignedApk.absolutePath
+        )
+        return executeSignCommand(apksignerBinary, command, onLogReceived)
     }
 
-    // လက်မှတ်ထိုးရန် သီးသန့် KeyPair ထုတ်ပေးသည့် စနစ်
-    private fun generateKeyPair(): KeyPair {
-        val keyGen = KeyPairGenerator.getInstance("RSA")
-        keyGen.initialize(2048)
-        return keyGen.generateKeyPair()
-    }
-
-    // JDK 17 နှင့် ကိုက်ညီသော စံနှုန်းမှီ Self-Signed Certificate ဖန်တီးခြင်း
-    private fun generateCertificate(keyPair: KeyPair): X509Certificate {
-        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-        keyStore.load(null, null)
-        
-        // Android က လက်ခံနိုင်စေရန် Android KeyStore သို့မဟုတ် standard သတ်မှတ်ချက်အတိုင်း ယာယီ Cert Object တစ်ခု ထုတ်ပေးခြင်း
-        // ⚠️ သတိပြုရန် - Pure Java တွင် BouncyCastle မပါဘဲ X509 V3 Certificate ကို အစမှ ဆောက်လျှင် sun.* လိုအပ်သဖြင့်
-        // Build Error ကင်းစေရန် လက်ရှိတွင် Mock သဘောမျိုး Standard X509 အဖြစ် ပြောင်းလဲပေးထားသည်။
-        
-        val dn = "CN=AI-IDE, O=ZyntraAI, C=MM"
-        val principal = X500Principal(dn)
-        
-        // ဤနေရာတွင် လက်တွေ့ အလုပ်လုပ်မည့် Cert ထွက်လာစေရန် Android KeyStore API ကို အသုံးပြုခြင်းက ပိုမိုကောင်းမွန်ပါသည်
-        throw UnsupportedOperationException("Android custom signing requires Android KeyStore provider for V2/V3 signing.")
-    }
-
-    private fun executeSignCommand(command: String): Boolean {
+    private fun generateDebugKeystore(): Boolean {
+        val keytoolBinary = File(binToolsDir, "keytool")
+        if (!keytoolBinary.exists()) return false
+        keytoolBinary.setExecutable(true, false)
+        val command = listOf(
+            keytoolBinary.absolutePath, "-genkey", "-v",
+            "-keystore", keystoreFile.absolutePath,
+            "-storepass", "android", "-alias", "androiddebugkey",
+            "-keypass", "android", "-keyalg", "RSA", "-keysize", "2048",
+            "-validity", "10000", "-dname", "CN=Android Debug, O=Android, C=US"
+        )
         return try {
-            val process = Runtime.getRuntime().exec(command)
+            ProcessBuilder(command).start().waitFor() == 0
+        } catch (e: Exception) { false }
+    }
+
+    private fun executeSignCommand(binaryFile: File, command: List<String>, onLogReceived: (String) -> Unit): Boolean {
+        if (!binaryFile.exists()) return false
+        return try {
+            binaryFile.setExecutable(true, false)
+            val process = ProcessBuilder(command).redirectErrorStream(true).start()
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                onLogReceived("Signer: $line")
+            }
             process.waitFor() == 0
-        } catch (e: Exception) {
-            false
-        }
+        } catch (e: Exception) { false }
     }
 }
