@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-// 🚀 ကျွန်ုပ်တို့ ဖန်တီးခဲ့သော အဓိက App Module အား Build System ထဲသို့ ထည့်သွင်းခြင်း
+// 🚀 Kotlin DSL အတွက် မှန်ကန်သော သတ်မှတ်ချက် (Double Quotes ဖြင့် ကွင်းစကွင်းပိတ်သုံးရန်)
 rootProject.name = "AI-IDE"
-include ':app'
+include(":app")
