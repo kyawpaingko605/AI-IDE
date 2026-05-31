@@ -1,1 +1,43 @@
+name: Fetch Android Binaries Automatically
 
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  download-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Assets Directory
+        run: mkdir -p app/src/main/assets/bin_tools
+
+      - name: Download Google Official Android Tools (No Redirect HTML)
+        run: |
+          cd app/src/main/assets/bin_tools/
+          
+          # 💡 1. Google Maven Official မြှားမှ တိုက်ရိုက်ဆွဲယူခြင်း (Fail ပြလျှင် ချက်ချင်းရပ်စေရန် -f သုံးထားပါသည်)
+          curl -f -L -o aapt2.zip https://repo1.maven.org/maven2/com/android/tools/build/aapt2/8.2.2-10154469/aapt2-8.2.2-10154469-linux.zip
+          unzip -o aapt2.zip aapt2
+          rm aapt2.zip
+
+          # 💡 2. R8/D8 Core Compiler Library အား Google Repository မှ ဆွဲယူခြင်း
+          curl -f -L -o d8 https://storage.googleapis.com/r8-releases/raw/r8-8.2.42.jar
+
+          # 💡 3. Standard Base Wrapper Script များ ဖန်တီးခြင်း
+          echo -e '#!/bin/sh\nexec dalvikvm -Xmx256m -cp "$0.jar" com.android.apksigner.Apksigner "$@"' > apksigner
+          echo -e '#!/bin/sh\nexec dalvikvm -Xmx128m -cp "$0.jar" sun.security.tools.keytool.Main "$@"' > keytool
+
+          # Linux Engine မောင်းနှင်ခွင့် ပေးခြင်း
+          chmod +x aapt2 d8 apksigner keytool
+
+      - name: Commit and Push Binaries back to GitHub
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/bin_tools/*
+          git diff-index --quiet HEAD || git commit -m "Automated Build: Standard Engine Binaries Synchronized"
+          git push
