@@ -1,1 +1,8 @@
+#!/bin/sh
+# ဖုန်းထဲတွင် ပါဝင်ပြီးသား Android Native AAPT2 ကို ပြန်လည်အသုံးချခြင်း
+if [ -f "/system/bin/aapt2" ]; then
+    exec /system/bin/aapt2 "$@"
+else
+    exec aapt2 "$@"
+fi
 
