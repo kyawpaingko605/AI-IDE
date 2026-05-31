@@ -21,6 +21,13 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    # 🛠️ gradlew ဖိုင်မရှိပါက အလိုအလျောက် Setup ပြန်ဆောက်ပေးမည့်အဆင့် (Error ပြင်ဆင်ချက်)
+    - name: Setup Gradle Wrapper if missing
+      run: |
+        if [ ! -f "gradlew" ]; then
+          gradle wrapper --gradle-version 8.4
+        fi
+
     - name: Grant Execute Permission for Gradle
       run: chmod +x gradlew
 
