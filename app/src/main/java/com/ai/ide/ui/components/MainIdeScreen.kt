@@ -19,7 +19,7 @@ import java.io.File
 @Composable
 fun MainIdeScreen() {
     val context = LocalContext.current
-    // ViewModel ကို အသုံးပြု၍ State နှင့် Build Pipeline ကို ထိန်းချုပ်ခြင်း
+    // ViewModel ကို အသုံးပြု၍ State ၊ Build Pipeline နှင့် Terminal Logs များကို ထိန်းချုပ်ခြင်း
     val viewModel = remember { MainViewModel(context) }
     val buildState = viewModel.buildState
     
@@ -54,70 +54,79 @@ fun MainIdeScreen() {
             }
         }
     ) { innerPadding ->
-        // 🛠️ File Explorer နှင့် Code Editor အား ဘေးချင်းယှဉ်ပြသရန် Horizontal Layout စနစ်သုံးခြင်း
-        Row(
+        // 🛠️ တစ်ပြင်လုံးအား အပေါ်အောက် (Vertical Column) ပုံစံဖြင့် ဖွဲ့စည်းပြီး အောက်ခြေတွင် Terminal ထားရှိခြင်း
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .background(Color(0xFF1E1E1E))
         ) {
-            // ၁။ ဘယ်ဘက်ခြမ်း - ပရောဂျက်အတွင်းရှိ ဖိုင်တွဲများကို ပြသပေးမည့် နေရာ
-            FileExplorerView(
-                projectDir = context.filesDir, 
-                onFileSelected = { file ->
-                    selectedFile = file
-                    currentCode = file.readText() // ဖိုင်တစ်ခုအား ကလစ်နှိပ်ပါက ၎င်းထဲမှ ကုဒ်များအား Editor သို့ ပို့မည်
-                },
-                modifier = Modifier.weight(0.3f) // Layout တစ်ခုလုံး၏ ၃၀ ရာခိုင်နှုန်းအား ယူမည်
-            )
-
-            // Layout နှစ်ခုကြား ခွဲခြားပေးသည့် ဗဟိုမျဉ်းကြောင်း (Divider)
-            Box(
+            // အပေါ်ပိုင်းအခြမ်း - File Explorer နှင့် Code Editor အား ဘေးချင်းယှဉ်ပြသမည့် နေရာ (Horizontal Row)
+            Row(
                 modifier = Modifier
-                    .fillMaxHeight()
-                    .width(1.dp)
-                    .background(Color(0xFF3C3C3C))
-            )
-
-            // ၂။ ညာဘက်ခြမ်း - ကုဒ်များ ရေးသားတည်းဖြတ်မည့် Advanced Code Editor နေရာ
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(0.7f) // Layout တစ်ခုလုံး၏ ၇၀ ရာခိုင်နှုန်းအား ယူမည်
+                    .fillMaxWidth()
+                    .weight(1f) // ကျန်ရှိသော မျက်နှာပြင်နေရာလွတ်အကုန် ယူမည်
             ) {
-                AdvancedCodeEditor(
-                    initialCode = currentCode,
-                    onCodeChange = { updatedCode -> 
-                        currentCode = updatedCode
-                        // ကုဒ်များ ပြင်ဆင်လိုက်တိုင်း ရွေးချယ်ထားသော ဖိုင်ထဲသို့ အလိုအလျောက် Real-time သိမ်းဆည်းမည်
-                        selectedFile?.writeText(updatedCode)
-                    }
+                // ၁။ ဘယ်ဘက်ခြမ်း - ပရောဂျက်အတွင်းရှိ ဖိုင်တွဲများကို ပြသပေးမည့် File Explorer View
+                FileExplorerView(
+                    projectDir = context.filesDir, 
+                    onFileSelected = { file ->
+                        selectedFile = file
+                        currentCode = file.readText() // ဖိုင်တစ်ခုအား ကလစ်နှိပ်ပါက ၎င်းထဲမှ ကုဒ်များအား Editor သို့ ပို့မည်
+                    },
+                    modifier = Modifier.weight(0.3f) // Layout တစ်ခုလုံး၏ ၃၀ ရာခိုင်နှုန်းအား ယူမည်
                 )
 
-                // 🛠️ Background တွင် Compiler Tools များ အလုပ်လုပ်နေစဉ် အဆင့်အလိုက် Loading ပြသမည့် စနစ်
-                if (buildState !is BuildState.Idle) {
-                    val statusMessage = when (buildState) {
-                        BuildState.ExtractingTools -> "Extracting Compiler Tools..."
-                        BuildState.CompilingResources -> "Compiling Resources (AAPT2)..."
-                        BuildState.DexingCode -> "Converting to Dex (D8)..."
-                        BuildState.SigningApk -> "Signing APK Package..."
-                        else -> "Processing..."
-                    }
+                // Layout နှစ်ခုကြား ခွဲခြားပေးသည့် ဗဟိုဒေါင်လိုက်မျဉ်းကြောင်း (Vertical Divider)
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(Color(0xFF3C3C3C))
+                )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.6f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // ၂။ ညာဘက်ခြမ်း - ကုဒ်များ ရေးသားတည်းဖြတ်မည့် Advanced Code Editor နေရာ
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(0.7f) // Layout တစ်ခုလုံး၏ ၇၀ ရာခိုင်နှုန်းအား ယူမည်
+                ) {
+                    AdvancedCodeEditor(
+                        initialCode = currentCode,
+                        onCodeChange = { updatedCode -> 
+                            currentCode = updatedCode
+                            // ကုဒ်များ ပြင်ဆင်လိုက်တိုင်း ရွေးချယ်ထားသော ဖိုင်ထဲသို့ အလိုအလျောက် Real-time သိမ်းဆည်းမည်
+                            selectedFile?.writeText(updatedCode)
+                        }
+                    )
+
+                    // Background တွင် Compiler Tools များ အလုပ်လုပ်နေစဉ် ပြသမည့် Loading Blur Screen Layer
+                    if (buildState !is BuildState.Idle) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(text = statusMessage, color = Color.White)
                         }
                     }
                 }
             }
+
+            // အပေါ်ပိုင်းနှင့် အောက်ခြေ Terminal ကြား ခွဲခြားပေးသည့် အလျားလိုက်မျဉ်းကြောင်း (Horizontal Divider)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFF3C3C3C))
+            )
+
+            // ၃။ အောက်ခြေအခြမ်း - Real-time Terminal Log Output View အား ပေါင်းစပ်ခြင်း
+            TerminalView(
+                logs = viewModel.terminalLogs,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
