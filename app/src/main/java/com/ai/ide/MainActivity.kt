@@ -8,19 +8,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.ai.ide.ui.components.MainIdeScreen
-import com.ai.ide.ui.theme.AIIDETheme // 💡 သင့်အက်ပ်တွင် သတ်မှတ်ထားသည့် Theme အမည်ကို အသုံးပြုပါ
+import com.ai.ide.ui.theme.AIIDETheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // 🎨 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သည့် Custom Jetpack Compose Theme အား ချိတ်ဆက်ခြင်း
             AIIDETheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // 🚀 ကျွန်ုပ်တို့ ဆောက်ခဲ့သည့် အဓိက IDE Screen အား စတင်ခေါ်ယူခြင်း
+                    // 🚀 အဓိက AI-IDE Screen မျက်နှာပြင်အား စတင်မောင်းနှင်ခြင်း
                     MainIdeScreen()
                 }
             }
