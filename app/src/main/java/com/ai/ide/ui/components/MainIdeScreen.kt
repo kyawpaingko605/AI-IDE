@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.ai.ide.utils.ApkSigner
+import com.ai.ide.utils.AssetManager
 import com.ai.ide.utils.ProjectBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,35 +25,41 @@ fun MainIdeScreen() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
-    // Core Engines များကို ယူနီဖောင်းဖြစ်အောင် ကြေညာခြင်း
+    // Core Engines များ အားလုံးကို စတင်ကြေညာခြင်း
     val projectBuilder = remember { ProjectBuilder(context) }
     val apkSigner = remember { ApkSigner(context) }
+    val assetManager = remember { AssetManager(context) }
     
-    // ရေးမှတ်ထားမည့် ကုဒ်များကို သိမ်းဆည်းရန် State
     var currentCode by remember { mutableStateOf("// Write your Kotlin code here\nfun main() {\n    println(\"Hello AI-IDE\")\n}") }
+
+    // 🛠️ အက်ပ်စဖွင့်သည်နှင့် Binaries များကို Background တွင် ဆွဲထုတ်ပေးမည့် စနစ်
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            assetManager.extractAssetsToStorage()
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
-            // 🛠️ APK ဆောက်လုပ်ပေးမည့် အဓိက "Build" ခလုတ်
             FloatingActionButton(
                 onClick = {
                     coroutineScope.launch {
                         Toast.makeText(context, "Building APK...", Toast.LENGTH_SHORT).show()
                         
                         val success = withContext(Dispatchers.IO) {
-                            // ၁။ ကုဒ်ဖိုင်ကို အရင်ဆုံး သိမ်းဆည်းခြင်း
+                            // ၁။ ကုဒ်ဖိုင်အား သိမ်းဆည်းခြင်း
                             val sourceFile = File(projectBuilder.srcDir, "MainActivity.kt")
                             sourceFile.writeText(currentCode)
                             
-                            // ၂။ AAPT2 ဖြင့် ရင်းမြစ်များကို Compile လုပ်ခြင်း
+                            // ၂။ AAPT2 ဖြင့် Resource Compile လုပ်ခြင်း
                             val aaptSuccess = projectBuilder.runAapt2Compile(projectBuilder.resDir)
                             if (!aaptSuccess) return@withContext false
                             
-                            // ၃။ D8 ဖြင့် Dexer ပြောင်းလဲခြင်း (အစမ်းနမူနာအဖြစ် sourceFile အား တိုက်ရိုက်သွားခြင်း)
+                            // ၃။ D8 ဖြင့် Dexer ပြောင်းလဲခြင်း
                             val dexSuccess = projectBuilder.runD8Dexing(listOf(sourceFile))
                             if (!dexSuccess) return@withContext false
                             
-                            // ၄။ ထွက်လာသည့် Unsigned APK အား ဒစ်ဂျစ်တယ်လက်မှတ်ထိုးခြင်း
+                            // ၄။ APK အား ဒစ်ဂျစ်တယ်လက်မှတ်ထိုးခြင်း
                             val unsignedApk = File(projectBuilder.binDir, "app-unsigned.apk")
                             val signedApk = File(projectBuilder.binDir, "app-release.apk")
                             
@@ -76,7 +83,6 @@ fun MainIdeScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // ရှေ့တွင် ဆောက်ခဲ့သည့် အဆင့်မြင့် Code Editor UI အား လှမ်းခေါ်ခြင်း
             AdvancedCodeEditor(
                 initialCode = currentCode,
                 onCodeChange = { updatedCode ->
