@@ -43,9 +43,16 @@ class MainViewModel(context: Context) : ViewModel() {
 
     private fun extractCompilerTools() {
         viewModelScope.launch(Dispatchers.IO) {
-            buildState = BuildState.ExtractingTools
+            // Main Thread ပေါ်တွင် State ပြောင်းလဲခြင်း
+            withContext(Dispatchers.Main) {
+                buildState = BuildState.ExtractingTools
+            }
+            
             val success = assetManager.extractAssetsToStorage()
-            buildState = if (success) BuildState.Idle else BuildState.Error("Failed to extract compiler tools.")
+            
+            withContext(Dispatchers.Main) {
+                buildState = if (success) BuildState.Idle else BuildState.Error("Failed to extract compiler tools.")
+            }
         }
     }
 
@@ -55,6 +62,7 @@ class MainViewModel(context: Context) : ViewModel() {
      */
     fun buildProject(codeText: String) {
         viewModelScope.launch {
+            // စတင်ချိန်တွင် Compiling Resources State သို့ ပြောင်းလဲခြင်း
             buildState = BuildState.CompilingResources
 
             val success = withContext(Dispatchers.IO) {
@@ -68,12 +76,16 @@ class MainViewModel(context: Context) : ViewModel() {
                     if (!aaptSuccess) return@withContext false
 
                     // ၃။ D8 Dexing လုပ်ငန်းစဉ်သို့ ကူးပြောင်းခြင်း State ပြောင်းမည်
-                    withContext(Dispatchers.Main) { buildState = BuildState.DexingCode }
+                    withContext(Dispatchers.Main) { 
+                        buildState = BuildState.DexingCode 
+                    }
                     val dexSuccess = projectBuilder.runD8Dexing(listOf(sourceFile))
                     if (!dexSuccess) return@withContext false
 
                     // ၄။ APK လက်မှတ်ထိုးခြင်း State ပြောင်းမည်
-                    withContext(Dispatchers.Main) { buildState = BuildState.SigningApk }
+                    withContext(Dispatchers.Main) { 
+                        buildState = BuildState.SigningApk 
+                    }
                     val unsignedApk = File(projectBuilder.binDir, "app-unsigned.apk")
                     val signedApk = File(projectBuilder.binDir, "app-release.apk")
 
