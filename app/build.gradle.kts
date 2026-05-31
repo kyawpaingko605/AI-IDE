@@ -53,7 +53,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
-    // 🎨 Jetpack Compose Stable Versions (BOM မသုံးဘဲ အသေကြေညာပေးခြင်းဖြင့် ရှာမတွေ့သည့် ပြဿနာကို ကျော်လွှားခြင်း)
+    // 🎨 Jetpack Compose Stable Versions
     implementation("androidx.compose.ui:ui:1.6.1")
     implementation("androidx.compose.ui:ui-graphics:1.6.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.6.1")
