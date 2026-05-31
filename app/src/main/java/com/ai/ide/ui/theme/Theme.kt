@@ -45,8 +45,8 @@ fun AIIDETheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        shapes = Shapes, // 💡 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သော Shapes စနစ်အား ချိတ်ဆက်ခြင်း
+        typography = Typography, // 💡 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သော Typography စနစ်အား ချိတ်ဆက်ခြင်း
+        shapes = Shapes,         // 💡 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သော Shapes စနစ်အား ချိတ်ဆက်ခြင်း
         content = content
     )
 }
