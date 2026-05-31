@@ -3,11 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android") version "1.9.22"
 }
 
-// 🛠️ ပြဿနာဖြေရှင်းချက် - အောက်ပါ Repository စနစ်ကို တိုက်ရိုက် ကြေညာပေးခြင်း
-repositories {
-    google()
-    mavenCentral()
-}
+// 🛠️ ပြင်ဆင်ချက် - ပိုနေသော repositories { ... } အကွက်ကို ဤနေရာမှ ဖြတ်ထုတ်လိုက်ပါပြီ။
 
 android {
     namespace = "com.ai.ide"
