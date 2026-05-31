@@ -3,8 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android") version "1.9.22"
 }
 
-// 🛠️ ပြင်ဆင်ချက် - ပိုနေသော repositories { ... } အကွက်ကို ဤနေရာမှ ဖြတ်ထုတ်လိုက်ပါပြီ။
-
 android {
     namespace = "com.ai.ide"
     compileSdk = 34
@@ -39,7 +37,8 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        // 🚀 Compose Compiler ကို အသေ သတ်မှတ်ပေးခြင်း
+        kotlinCompilerExtensionVersion = "1.5.8" 
     }
     packaging {
         resources {
@@ -54,13 +53,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
-    // 🎨 Jetpack Compose UI Platform
-    implementation(platform("androidx.compose:compose-bom:2023.08.0"))
-    implementation("androidx.compose.ui:ui:1.5.0")
-    implementation("androidx.compose.ui:ui-graphics:1.5.0")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.5.0")
-    implementation("androidx.compose.material3:material3:1.1.1")
-    implementation("androidx.compose.material:material-icons-extended:1.5.0")
+    // 🎨 Jetpack Compose Stable Versions (BOM မသုံးဘဲ အသေကြေညာပေးခြင်းဖြင့် ရှာမတွေ့သည့် ပြဿနာကို ကျော်လွှားခြင်း)
+    implementation("androidx.compose.ui:ui:1.6.1")
+    implementation("androidx.compose.ui:ui-graphics:1.6.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.6.1")
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 
     // 🧠 Coroutines for Background Compiler Pipeline
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -69,6 +67,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.5.0")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.0")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.6.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.1")
 }
