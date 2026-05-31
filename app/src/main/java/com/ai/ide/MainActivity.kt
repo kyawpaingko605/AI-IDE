@@ -14,13 +14,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // 🎨 ကျွန်ုပ်တို့ သတ်မှတ်ခဲ့သည့် Custom Jetpack Compose Theme အား ချိတ်ဆက်ခြင်း
+            // 🎨 ကျွန်ုပ်တို့ ဖန်တီးခဲ့သော Custom Dark Theme အား စနစ်တကျ ချိတ်ဆက်ခြင်း
             AIIDETheme {
+                // တစ်ပြင်လုံးအပြည့် Surface ဖြင့် ဖုံးအုပ်ပြီး Theme ၏ နောက်ခံအရောင်ကို ယူခြင်း
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // 🚀 အဓိက AI-IDE Screen မျက်နှာပြင်အား စတင်မောင်းနှင်ခြင်း
+                    // 🚀 File Explorer၊ Editor နှင့် Terminal ပါဝင်သော အဓိက AI-IDE Screen ကို စတင်မောင်းနှင်ခြင်း
                     MainIdeScreen()
                 }
             }
