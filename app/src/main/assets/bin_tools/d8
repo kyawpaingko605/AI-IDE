@@ -1,3 +1,2 @@
 #!/bin/sh
-# Android System ၏ built-in compiler engine အား မောင်းနှင်ရန် script
 exec dalvikvm -Xmx256m -cp "$0.jar" com.android.tools.r8.D8 "$@"
