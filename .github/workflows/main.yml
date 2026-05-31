@@ -1,36 +1,21 @@
-name: Generate Android Tool Scripts Locally
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
+name: Setup Binaries
+on: [push, workflow_dispatch]
 jobs:
-  generate-tools:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Create Assets Directory
-        run: mkdir -p app/src/main/assets/bin_tools
-
-      - name: Write Local Native Engine Shell Wrappers
-        run: |
-          cd app/src/main/assets/bin_tools/
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p app/src/main/assets/bin_tools
+          # Google Official Build Tools အစစ်ကို ဆွဲခြင်း
+          curl -L "https://dl.google.com/android/repository/build-tools_r34.0.0-linux.zip" -o tools.zip
+          unzip -j tools.zip "*/aapt2" "*/d8.jar" "*/apksigner.jar" -d app/src/main/assets/bin_tools/
           
-          # အင်တာနက်ကနေ ဘာမှမဒေါင်းပါ (curl မသုံးပါ)
-          echo -e '#!/bin/sh\nif [ -f "/system/bin/aapt2" ]; then\n    exec /system/bin/aapt2 "$@"\nelse\n    exec aapt2 "$@"\nfi' > aapt2
-          echo -e '#!/bin/sh\nexec dalvikvm -Xmx256m -cp "$0.jar" com.android.tools.r8.D8 "$@"' > d8
-          echo -e '#!/bin/sh\nexec dalvikvm -Xmx256m -cp "$0.jar" com.android.apksigner.Apksigner "$@"' > apksigner
-          echo -e '#!/bin/sh\nexec dalvikvm -Xmx128m -cp "$0.jar" sun.security.tools.keytool.Main "$@"' > keytool
-
-          chmod +x aapt2 d8 apksigner keytool
-
-      - name: Commit and Push Pure Scripts back to GitHub
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/assets/bin_tools/*
-          git diff-index --quiet HEAD || git commit -m "Automated Build: Pure Tooling Scripts Injected Locally"
-          git push
+          # Rename ပြင်ပေးခြင်း
+          cd app/src/main/assets/bin_tools/
+          mv d8.jar d8
+          mv apksigner.jar apksigner
+          chmod +x aapt2 d8 apksigner
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Fix: Official Binaries Injected"
