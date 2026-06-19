@@ -1,0 +1,28 @@
+name: Setup Binaries
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p app/src/main/assets/bin_tools
+          
+          # Google Official Build Tools အစစ်ကို ဆွဲခြင်း
+          curl -L "https://dl.google.com/android/repository/build-tools_r34.0.0-linux.zip" -o tools.zip
+          
+          # Zip ဖိုင်ထဲက နေရာအမှန်အတိုင်း ရှာပြီး ဖြည်ချခြင်း
+          unzip -j tools.zip "android-14/aapt2" "android-14/lib/d8.jar" "android-14/lib/apksigner.jar" -d app/src/main/assets/bin_tools/
+          
+          # Rename ပြင်ပေးခြင်း
+          cd app/src/main/assets/bin_tools/
+          mv d8.jar d8
+          mv apksigner.jar apksigner
+          chmod +x aapt2 d8 apksigner
+          
+          # ရှင်းလင်းရေး
+          rm -f ../../../../tools.zip
+          
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Fix: Official Binaries and JARs Injected from Exact Path"
