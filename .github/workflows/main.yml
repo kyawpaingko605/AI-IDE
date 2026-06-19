@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ၁။ Java Environment အား သတ်မှတ်ခြင်း
+      # ၁။ Java JDK 17 ကို အဆင်သင့်ပြင်ဆင်ခြင်း
       - name: set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -14,31 +14,27 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ၂။ ရှိပြီးသား Binaries များကို Setup လုပ်ခြင်း
+      # ၂။ သင့်ဆီမှာ ရှိပြီးသား Binaries များကို Setup လုပ်ခြင်း
       - name: Verify and Setup Existing Binaries
         run: |
           mkdir -p app/src/main/assets/bin_tools
           cd app/src/main/assets/bin_tools/
           chmod +x aapt2 d8 apksigner || true
 
-      # ၃။ Project ထဲက gradlew ရှိတဲ့နေရာကို ရှာပြီး Permission ပေးခြင်း
-      - name: Grant execute permission for gradlew
+      # ၃။ gradlew ဖိုင်မရှိပါက ရှိပြီးသား properties ကိုသုံးပြီး အော်တိုဆောက်ခိုင်းခြင်း
+      - name: Generate Gradle Wrapper if Missing
         run: |
-          GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew file not found in your project!"
-            exit 1
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew missing! Generating wrapper from existing configuration..."
+            gradle wrapper
           fi
-          chmod +x "$GRADLEW_PATH"
-          echo "GRADLEW_DIR=$(dirname "$GRADLEW_PATH")" >> $GITHUB_ENV
+          chmod +x gradlew
 
-      # ၄။ သက်ဆိုင်ရာ Folder ထဲဝင်ပြီး APK ကို Build ထုတ်ခြင်း
+      # ၄။ APK အား အောင်မြင်အောင် Build ထုတ်ခြင်း
       - name: Build with Gradle
-        run: |
-          cd ${{ env.GRADLEW_DIR }}
-          ./gradlew assembleDebug
+        run: ./gradlew assembleDebug
 
-      # ၅။ ထွက်လာသော APK အား တင်ပေးခြင်း
+      # ၅။ ထွက်လာသော APK ဖိုင်အား Actions ထဲတွင် ဒေါင်းလုဒ်ဆွဲနိုင်ရန် တင်ပေးခြင်း
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
