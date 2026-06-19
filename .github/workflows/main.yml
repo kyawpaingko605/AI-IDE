@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ၁။ Java JDK 17 ကို အဆင်သင့်ပြင်ဆင်ခြင်း
+      # ၁။ Java JDK 17 ကို သတ်မှတ်ခြင်း
       - name: set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -14,27 +14,32 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ၂။ သင့်ဆီမှာ ရှိပြီးသား Binaries များကို Setup လုပ်ခြင်း
+      # ၂။ ရှိပြီးသား Binaries များကို Setup လုပ်ခြင်း
       - name: Verify and Setup Existing Binaries
         run: |
           mkdir -p app/src/main/assets/bin_tools
           cd app/src/main/assets/bin_tools/
           chmod +x aapt2 d8 apksigner || true
 
-      # ၃။ gradlew ဖိုင်မရှိပါက ရှိပြီးသား properties ကိုသုံးပြီး အော်တိုဆောက်ခိုင်းခြင်း
+      # ၃။ gradlew ဖိုင်မရှိပါက အော်တိုဆောက်ခြင်း
       - name: Generate Gradle Wrapper if Missing
         run: |
           if [ ! -f "gradlew" ]; then
-            echo "gradlew missing! Generating wrapper from existing configuration..."
+            echo "gradlew missing! Generating wrapper..."
             gradle wrapper
           fi
           chmod +x gradlew
 
-      # ၄။ APK အား အောင်မြင်အောင် Build ထုတ်ခြင်း
+      # ၄။ ပိုမိုတည်ငြိမ်ပြီး အဆင်ပြေမည့် Gradle Version 8.2 ကို ပြောင်းလဲသတ်မှတ်ခြင်း
+      - name: Downgrade Gradle Version for Compatibility
+        run: |
+          ./gradlew wrapper --gradle-version 8.2 --distribution-type bin
+
+      # ၅။ APK အား အောင်မြင်အောင် Build ထုတ်ခြင်း
       - name: Build with Gradle
         run: ./gradlew assembleDebug
 
-      # ၅။ ထွက်လာသော APK ဖိုင်အား Actions ထဲတွင် ဒေါင်းလုဒ်ဆွဲနိုင်ရန် တင်ပေးခြင်း
+      # ၆။ ထွက်လာသော APK ဖိုင်အား တင်ပေးခြင်း
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
