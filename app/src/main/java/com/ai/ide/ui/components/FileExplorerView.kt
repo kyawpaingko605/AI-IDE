@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext // LocalContext အတွက် import ထည့်သွင်းခြင်း
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ai.ide.utils.ProjectFileManager
@@ -25,7 +26,10 @@ fun FileExplorerView(
     onFileSelected: (File) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val fileManager = remember { ProjectFileManager() }
+    // LocalContext ကို ယူပြီး ProjectFileManager ထဲသို့ context ထည့်ပေးလိုက်ခြင်း
+    val context = LocalContext.current
+    val fileManager = remember { ProjectFileManager(context) } 
+    
     var currentDir by remember(projectDir) { mutableStateOf(projectDir) }
     var fileList by remember { mutableStateOf(emptyList<File>()) }
 
