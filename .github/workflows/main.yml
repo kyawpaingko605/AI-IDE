@@ -21,24 +21,24 @@ jobs:
           cd app/src/main/assets/bin_tools/
           chmod +x aapt2 d8 apksigner || true
 
-      # ၃။ gradlew ဖိုင်ကို ရှာဖွေပြီး Permission ပေးခြင်း
+      # ၃။ Project ထဲက gradlew ရှိတဲ့နေရာကို ရှာပြီး Permission ပေးခြင်း
       - name: Grant execute permission for gradlew
         run: |
           GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
           if [ -z "$GRADLEW_PATH" ]; then
-            echo "Error: gradlew file not found anywhere!"
+            echo "Error: gradlew file not found in your project!"
             exit 1
           fi
           chmod +x "$GRADLEW_PATH"
           echo "GRADLEW_DIR=$(dirname "$GRADLEW_PATH")" >> $GITHUB_ENV
 
-      # ၄။ APK အား သက်ဆိုင်ရာ Folder ထဲဝင်၍ Build ထုတ်ခြင်း
+      # ၄။ သက်ဆိုင်ရာ Folder ထဲဝင်ပြီး APK ကို Build ထုတ်ခြင်း
       - name: Build with Gradle
         run: |
           cd ${{ env.GRADLEW_DIR }}
           ./gradlew assembleDebug
 
-      # ၅။ ထွက်လာသော APK အား Actions ထဲတွင် တင်ပေးခြင်း
+      # ၅။ ထွက်လာသော APK အား တင်ပေးခြင်း
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
