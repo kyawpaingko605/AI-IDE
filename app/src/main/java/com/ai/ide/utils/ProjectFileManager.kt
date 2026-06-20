@@ -1,70 +1,59 @@
-package com.ai.ide.utils
-
-import android.content.Context
-import java.io.File
-import java.io.FileOutputStream
-
-class ProjectFileManager(private val context: Context) {
-
-    init {
-        // App စပွင့်တာနဲ့ aapt2, d8, apksigner တို့ကို Internal Storage ထဲ အော်တို Setup လုပ်ပေးမည်
-        setupBinaries()
-    }
-
-    // ⚙️ Assets ထဲက aapt2 စသည့် Binary များကို ဖုန်းထဲ Setup လုပ်ပေးမည့် လုပ်ဆောင်ချက်
-    fun setupBinaries() {
-        try {
-            val binToolsDir = File(context.filesDir, "bin_tools")
-            if (!binToolsDir.exists()) binToolsDir.mkdirs()
-
-            // လိုအပ်သော Binary ဖိုင်စာရင်း
-            val binaries = listOf("aapt2", "d8", "apksigner")
-
-            binaries.forEach { binaryName ->
-                val targetFile = File(binToolsDir, binaryName)
-                
-                // ဖိုင်မရှိသေးရင် Assets ထဲကနေ ကူးထည့်မယ်
-                if (!targetFile.exists()) {
-                    context.assets.open("bin_tools/$binaryName").use { inputStream ->
-                        FileOutputStream(targetFile).use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-                }
-                // ဖုန်းက ပတ်မောင်းလို့ရအောင် Linux Permission (Chmod +x) ပေးခြင်း
-                targetFile.setExecutable(true, false)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    // 📁 Project အသစ်ဆောက်ပြီး Template ဖိုင်များ အလိုအလျောက် ထည့်ပေးမည့် လုပ်ဆောင်ချက်
-    fun createNewProject(projectDir: File, packageName: String): Boolean {
+    // 📁 အသုံးပြုသူ စိတ်ကြိုက်ပေးသော နာမည်များဖြင့် Project အသစ်ဆောက်မည့် လုပ်ဆောင်ချက်
+    fun createNewProject(parentDir: File, projectName: String, packageName: String): Boolean {
         return try {
+            // ၁။ အသုံးပြုသူ ပေးလိုက်သော နာမည်ဖြင့် ပရောဂျက် Folder ဆောက်မည်
+            val projectDir = File(parentDir, projectName)
             if (!projectDir.exists()) projectDir.mkdirs()
 
-            // ၁။ လိုအပ်မည့် Folder ဖွဲ့စည်းပုံများကို ဆောက်မည်
-            val srcDir = File(projectDir, "src/main/java/${packageName.replace('.', '/')} ")
-            val resLayoutDir = File(projectDir, "src/main/res/layout")
-            val resValuesDir = File(projectDir, "src/main/res/values")
-            val binDir = File(projectDir, "bin")
+            // ၂။ Folder ဖွဲ့စည်းပုံများကို တိတိကျကျ ဆောက်မည်
+            val appDir = File(projectDir, "app")
+            val srcDir = File(appDir, "src/main/java/${packageName.replace('.', '/')}")
+            val resLayoutDir = File(appDir, "src/main/res/layout")
+            val resValuesDir = File(appDir, "src/main/res/values")
 
             srcDir.mkdirs()
             resLayoutDir.mkdirs()
             resValuesDir.mkdirs()
-            binDir.mkdirs()
 
-            // ၂။ Assets ထဲက Template ဖိုင်များကို သက်ဆိုင်ရာ Folder ထဲ ကူးထည့်မည်
-            copyAssetFile("template/AndroidManifest.xml", File(projectDir, "AndroidManifest.xml"))
-            copyAssetFile("template/activity_main.xml", File(resLayoutDir, "activity_main.xml"))
-            copyAssetFile("template/strings.xml", File(resValuesDir, "strings.xml"))
-            copyAssetFile("template/MainActivity.kt", File(srcDir, "MainActivity.kt"))
+            // ၃။ ရိုးရိုး ကူးရုံုံရမည့် ဖိုင်များကို ကူးမည်
+            copyAssetFile("template/build.gradle", File(projectDir, "build.gradle"))
+            copyAssetFile("template/settings.gradle", File(projectDir, "settings.gradle"))
+            copyAssetFile("template/app/build.gradle", File(appDir, "build.gradle"))
+            copyAssetFile("template/app/activity_main.xml", File(resLayoutDir, "activity_main.xml"))
+
+            // ၄။ အသုံးပြုသူပေးသော Dynamic နာမည်များကို အစားထိုးပြီးမှ ဖိုင်ထဲ ထည့်မည်
+            
+            // (က) AndroidManifest.xml ထဲတွင် Package Name အစားထိုးခြင်း
+            copyAssetWithReplace("template/app/AndroidManifest.xml", File(appDir, "src/main/AndroidManifest.xml")) { content ->
+                content.replace("com.example.template", packageName)
+            }
+
+            // (ခ) strings.xml ထဲတွင် Project Name (App Name) အစားထိုးခြင်း
+            copyAssetWithReplace("template/app/strings.xml", File(resValuesDir, "strings.xml")) { content ->
+                content.replace("TemplateApp", projectName)
+            }
+
+            // (ဂ) MainActivity.kt ထဲတွင် Package Name အစားထိုးခြင်း
+            copyAssetWithReplace("template/app/MainActivity.kt", File(srcDir, "MainActivity.kt")) { content ->
+                content.replace("package com.example.template", "package $packageName")
+            }
 
             true
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    // စာသားများကို အစားထိုးပြီးမှ ဖိုင်အဖြစ် သိမ်းဆည်းပေးမည့် အကူအညီပေးချက် (Helper)
+    private fun copyAssetWithReplace(assetPath: String, targetFile: File, replaceLogic: (String) -> String) {
+        context.assets.open(assetPath).bufferedReader().use { reader ->
+            val originalContent = reader.readText()
+            val updatedContent = replaceLogic(originalContent)
+            
+            FileOutputStream(targetFile).bufferedWriter().use { writer ->
+                writer.write(updatedContent)
+            }
         }
     }
 
@@ -75,33 +64,3 @@ class ProjectFileManager(private val context: Context) {
             }
         }
     }
-
-    // ➕ ဖိုင် သို့မဟုတ် Folder အသစ်ဆောက်ခြင်း
-    fun createNode(parentDir: File, name: String, isFolder: Boolean): File? {
-        val newNode = File(parentDir, name)
-        return try {
-            if (isFolder) {
-                if (newNode.mkdirs()) newNode else null
-            } else {
-                if (newNode.createNewFile()) newNode else null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-
-    // ❌ ဖိုင် သို့မဟုတ် Folder ဖျက်ခြင်း
-    fun deleteNode(node: File): Boolean {
-        return if (node.isDirectory) {
-            node.deleteRecursively()
-        } else {
-            node.delete()
-        }
-    }
-
-    // 🔍 Project Structure လှမ်းယူခြင်း
-    fun getProjectStructure(projectDir: File): List<File> {
-        return projectDir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name }))?.toList() ?: emptyList()
-    }
-}
