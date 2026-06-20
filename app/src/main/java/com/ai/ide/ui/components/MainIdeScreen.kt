@@ -19,7 +19,7 @@ import java.io.File
 
 @Composable
 fun MainIdeScreen(
-    compiler: AppCompiler, // 👈 MainActivity က ပေးလိုက်တဲ့ compiler ကို လက်ခံရန် ဒီနေရာမှာ ထည့်ပေးလိုက်ပါပြီ
+    compiler: AppCompiler, // 👈 MainActivity က လှမ်းပေးလိုက်တဲ့ compiler ကို လက်ခံရန် ဒီနေရာမှာ ထည့်ပေးလိုက်ပါပြီ
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
