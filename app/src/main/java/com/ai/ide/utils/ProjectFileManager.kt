@@ -1,3 +1,24 @@
+package com.ai.ide.utils
+
+import android.content.Context
+import java.io.File
+import java.io.FileOutputStream
+
+class ProjectFileManager(private val context: Context) {
+
+    // 📁 ရွေးချယ်ထားသော Folder အတွင်းရှိ ဖိုင်များနှင့် ဖိုဒါများကို လိုက်ရှာပေးမည့် လုပ်ဆောင်ချက်
+    fun getProjectStructure(rootId: File): List<File> {
+        val fileList = mutableListOf<File>()
+        val files = rootId.listFiles()
+        if (files != null) {
+            for (file in files) {
+                fileList.add(file)
+            }
+        }
+        // Folder များကို အပေါ်တင်ပြီး နာမည်အက္ခရာစဉ်အလိုက် စီပေးခြင်း
+        return fileList.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+    }
+
     // 📁 အသုံးပြုသူ စိတ်ကြိုက်ပေးသော နာမည်များဖြင့် Project အသစ်ဆောက်မည့် လုပ်ဆောင်ချက်
     fun createNewProject(parentDir: File, projectName: String, packageName: String): Boolean {
         return try {
@@ -51,16 +72,24 @@
             val originalContent = reader.readText()
             val updatedContent = replaceLogic(originalContent)
             
+            // ဖိုင်တည်ရှိမည့်အပြင်ဘက် Folder မရှိသေးပါက ဆောက်ပေးခြင်း
+            targetFile.parentFile?.mkdirs()
+            
             FileOutputStream(targetFile).bufferedWriter().use { writer ->
                 writer.write(updatedContent)
             }
         }
     }
 
+    // Asset ထဲမှ ဖိုင်များကို ရိုးရိုးရှင်းရှင်း Target နေရာသို့ ကူးယူပေးမည့် လုပ်ဆောင်ချက်
     private fun copyAssetFile(assetPath: String, targetFile: File) {
         context.assets.open(assetPath).use { inputStream ->
+            // ဖိုင်တည်ရှိမည့်အပြင်ဘက် Folder မရှိသေးပါက ဆောက်ပေးခြင်း
+            targetFile.parentFile?.mkdirs()
+            
             FileOutputStream(targetFile).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
         }
     }
+}
