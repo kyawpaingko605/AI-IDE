@@ -1,0 +1,3 @@
+// build.gradle နဲ့ settings.gradle ကိုပါ ပရောဂျက်အသစ်ထဲ အော်တိုကူးထည့်ခိုင်းခြင်း
+copyAssetFile("template/build.gradle", File(projectDir, "build.gradle"))
+copyAssetFile("template/settings.gradle", File(projectDir, "settings.gradle"))
