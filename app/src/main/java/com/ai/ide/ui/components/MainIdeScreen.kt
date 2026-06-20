@@ -14,10 +14,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ai.ide.ui.viewmodel.BuildState
 import com.ai.ide.ui.viewmodel.MainViewModel
+import com.ai.ide.utils.AppCompiler // 👈 Compiler ကို သုံးနိုင်ရန် Import လုပ်ခြင်း
 import java.io.File
 
 @Composable
-fun MainIdeScreen() {
+fun MainIdeScreen(
+    compiler: AppCompiler, // 👈 MainActivity က ပေးလိုက်တဲ့ compiler ကို လက်ခံရန် ဒီနေရာမှာ ထည့်ပေးလိုက်ပါပြီ
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val viewModel = remember { MainViewModel(context) }
     val buildState = viewModel.buildState
