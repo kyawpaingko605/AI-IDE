@@ -37,7 +37,6 @@ class MainViewModel(context: Context) : ViewModel() {
         private set
 
     init {
-        // 💡 [🧠 Build Engine Trigger]: အက်ပ်စဖွင့်သည်နှင့် ဖိုင်တွဲစနစ်ကို ချက်ချင်း အရင်ဆောက်စေခြင်း
         createFullAndroidProjectStructure()
         extractCompilerTools()
     }
@@ -61,26 +60,22 @@ class MainViewModel(context: Context) : ViewModel() {
                 if (success) {
                     logToTerminal("System: Compiler binaries (aapt2, d8) are synchronized successfully.")
                 } else {
-                    // 💡 Binaries မရှိသေးပါက လက်ရှိ ပရောဂျက်တည်ဆောက်မှုကို မထိခိုက်စေရန် Log သီးသန့်ပြခြင်း
                     logToTerminal("Warning: Native compiler tools need execution permission or asset synchronization.")
                 }
             }
         }
     }
 
-    // 💡 [⚙️ Core Build Engine]: AIDE ကဲ့သို့ Standard ဖိုင်တွဲနှင့် ဖိုင်အကုန်လုံးကို Setup ချပေးမည့် နေရာကြီး
     private fun createFullAndroidProjectStructure() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // ၁။ လိုအပ်သော ဖိုဒါပတ်လမ်းကြောင်းများအား အကုန်အစုံ အတင်းအကျပ် ဆောက်ခိုင်းခြင်း
                 val javaSrcDir = File(projectBuilder.projectDir, "src/main/java/com/example/myapp").apply { if (!exists())  mkdirs() }
                 val resLayoutDir = File(projectBuilder.projectDir, "src/main/res/layout").apply { if (!exists()) mkdirs() }
                 val resValuesDir = File(projectBuilder.projectDir, "src/main/res/values").apply { if (!exists()) mkdirs() }
-                val resDrawableDir = File(projectBuilder.projectDir, "src/main/res/drawable").apply { if (!exists()) mkdirs() }
+                File(projectBuilder.projectDir, "src/main/res/drawable").apply { if (!exists()) mkdirs() }
                 
                 if (!projectBuilder.binDir.exists()) projectBuilder.binDir.mkdirs()
 
-                // ၂။ အဓိက အသက်ဖြစ်သော AndroidManifest.xml အား အလိုအလျောက် ဆောက်ပေးခြင်း
                 val manifestFile = File(projectBuilder.projectDir, "src/main/AndroidManifest.xml")
                 if (!manifestFile.exists()) {
                     manifestFile.parentFile.mkdirs()
@@ -99,7 +94,6 @@ class MainViewModel(context: Context) : ViewModel() {
                     """.trimIndent())
                 }
 
-                // ၃။ UI Graphic အတွက် တောင်းဆိုနေသော စုန်းစတိုင် layer-list / XML layouts များ ဖန်တီးခြင်း
                 val mainLayoutFile = File(resLayoutDir, "activity_main.xml")
                 if (!mainLayoutFile.exists()) {
                     mainLayoutFile.writeText("""
@@ -121,7 +115,6 @@ class MainViewModel(context: Context) : ViewModel() {
                     """.trimIndent())
                 }
 
-                // ၄။ strings.xml အား စံနှုန်းအတိုင်း တည်ဆောက်ခြင်း
                 val stringsFile = File(resValuesDir, "strings.xml")
                 if (!stringsFile.exists()) {
                     stringsFile.writeText("""
@@ -132,7 +125,6 @@ class MainViewModel(context: Context) : ViewModel() {
                     """.trimIndent())
                 }
 
-                // ၅။ ပင်မ ကုဒ်မောင်းနှင်မည့် MainActivity.kt အား လမ်းကြောင်းမှန်ကန်စွာဖြင့် ကွက်တိ သွားဆောက်ပေးခြင်း
                 val mainActivityFile = File(javaSrcDir, "MainActivity.kt")
                 if (!mainActivityFile.exists()) {
                     mainActivityFile.writeText("""
@@ -144,7 +136,6 @@ class MainViewModel(context: Context) : ViewModel() {
                         class MainActivity : Activity() {
                             override fun onCreate(savedInstanceState: Bundle?) {
                                 super.onCreate(savedInstanceState)
-                                // Generated Layout အား ချိတ်ဆက်ခြင်း
                                 setContentView(resources.getIdentifier("activity_main", "layout", packageName))
                             }
                         }
@@ -171,7 +162,6 @@ class MainViewModel(context: Context) : ViewModel() {
 
             val success = withContext(Dispatchers.IO) {
                 try {
-                    // ပြင်ဆင်လိုက်သော ကုဒ်အား java package လမ်းကြောင်းထဲသို့ အသေ သွားသိမ်းခြင်း
                     val javaSrcDir = File(projectBuilder.projectDir, "src/main/java/com/example/myapp")
                     val sourceFile = File(javaSrcDir, "MainActivity.kt")
                     sourceFile.writeText(codeText)
@@ -188,12 +178,20 @@ class MainViewModel(context: Context) : ViewModel() {
                     withContext(Dispatchers.Main) { buildState = BuildState.SigningApk }
                     logToTerminal("ApkSigner: Aligning cryptograph and signing targets...")
                     
-                    val unsignedApk = File(projectBuilder.binDir, "app-unsigned.apk").apply { if(!exists()) createNewFile() }
+                    val unsignedApk = File(projectBuilder.binDir, "app-unsigned.apk")
                     val signedApk = File(projectBuilder.binDir, "app-release.apk")
 
-                    return@withContext apkSigner.signApk(unsignedApk, signedApk) { log -> logToTerminal(log) }
+                    // AAPT2 ကြောင့် တကယ်ထွက်လာတဲ့ Unsigned APK ရှိမှသာ Sign ဆက်လုပ်ခိုင်းခြင်း
+                    if (unsignedApk.exists()) {
+                        return@withContext apkSigner.signApk(unsignedApk, signedApk) { log -> logToTerminal(log) }
+                    } else {
+                        withContext(Dispatchers.Main) { logToTerminal("Error: Unsigned APK not found. AAPT2 linking might have skipped output.") }
+                        return@withContext false
+                    }
                 } catch (e: Exception) {
-                    logToTerminal("Error: ${e.message}")
+                    withContext(Dispatchers.Main) {
+                        logToTerminal("Error: ${e.message}")
+                    }
                     false
                 }
             }
