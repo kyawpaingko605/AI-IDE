@@ -54,9 +54,9 @@ class ProjectFileManager(private val context: Context) {
                 content.replace("TemplateApp", projectName)
             }
 
-            // (ဂ) MainActivity.kt ထဲတွင် Package Name အစားထိုးခြင်း
+            // (ဂ) MainActivity.kt ထဲတွင် Package Name အစားထိုးခြင်း (ပိုမိုစိတ်ချရအောင် ပြင်ဆင်ခြင်း)
             copyAssetWithReplace("template/app/MainActivity.kt", File(srcDir, "MainActivity.kt")) { content ->
-                content.replace("package com.example.template", "package $packageName")
+                content.replace("com.example.template", packageName)
             }
 
             true
@@ -68,28 +68,34 @@ class ProjectFileManager(private val context: Context) {
 
     // စာသားများကို အစားထိုးပြီးမှ ဖိုင်အဖြစ် သိမ်းဆည်းပေးမည့် အကူအညီပေးချက် (Helper)
     private fun copyAssetWithReplace(assetPath: String, targetFile: File, replaceLogic: (String) -> String) {
-        context.assets.open(assetPath).bufferedReader().use { reader ->
-            val originalContent = reader.readText()
-            val updatedContent = replaceLogic(originalContent)
-            
-            // ဖိုင်တည်ရှိမည့်အပြင်ဘက် Folder မရှိသေးပါက ဆောက်ပေးခြင်း
-            targetFile.parentFile?.mkdirs()
-            
-            FileOutputStream(targetFile).bufferedWriter().use { writer ->
-                writer.write(updatedContent)
+        try {
+            context.assets.open(assetPath).bufferedReader().use { reader ->
+                val originalContent = reader.readText()
+                val updatedContent = replaceLogic(originalContent)
+                
+                targetFile.parentFile?.mkdirs()
+                
+                FileOutputStream(targetFile).bufferedWriter().use { writer ->
+                    writer.write(updatedContent)
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     // Asset ထဲမှ ဖိုင်များကို ရိုးရိုးရှင်းရှင်း Target နေရာသို့ ကူးယူပေးမည့် လုပ်ဆောင်ချက်
     private fun copyAssetFile(assetPath: String, targetFile: File) {
-        context.assets.open(assetPath).use { inputStream ->
-            // ဖိုင်တည်ရှိမည့်အပြင်ဘက် Folder မရှိသေးပါက ဆောက်ပေးခြင်း
-            targetFile.parentFile?.mkdirs()
-            
-            FileOutputStream(targetFile).use { outputStream ->
-                inputStream.copyTo(outputStream)
+        try {
+            context.assets.open(assetPath).use { inputStream ->
+                targetFile.parentFile?.mkdirs()
+                
+                FileOutputStream(targetFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
